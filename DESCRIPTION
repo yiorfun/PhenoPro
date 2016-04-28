@@ -1,0 +1,9 @@
+Package: PhenoPro
+Type: Package
+Title: PhenoType Calculate
+Version: 0.1.0
+Author: Yifan Yang, Jin Chen
+Maintainer: Yifan Yang <yiorfun@gmail.com>
+Description: More about what it does (maybe more than one line)
+License: GPL
+LazyData: TRUE
