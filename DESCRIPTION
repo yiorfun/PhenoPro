@@ -1,9 +1,15 @@
 Package: PhenoPro
 Type: Package
-Title: PhenoType Calculate
-Version: 0.1.0
+Title: Analysis Ordered Data By XXX
+Version: 0.2.0
 Author: Yifan Yang, Jin Chen
 Maintainer: Yifan Yang <yiorfun@gmail.com>
-Description: More about what it does (maybe more than one line)
-License: GPL
+Description: PhenoPro is a package which sloves the XXX.
+License: GPL-3
 LazyData: TRUE
+Depends:
+    R (>= 3.2.5),
+    MASS,
+    e1071,
+    randomForest
+RoxygenNote: 5.0.1
