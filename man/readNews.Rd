@@ -1,5 +1,5 @@
 \name{readNews}
-\alias{PhenoPro}
+\alias{readNews}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 	This is readNews
