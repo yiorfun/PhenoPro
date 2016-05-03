@@ -7,9 +7,5 @@ Maintainer: Yifan Yang <yiorfun@gmail.com>
 Description: PhenoPro is a package which sloves the XXX.
 License: GPL-3
 LazyData: TRUE
-Depends:
-    R (>= 3.2.5),
-    MASS,
-    e1071,
-    randomForest
-RoxygenNote: 5.0.1
+Depends: R (>= 3.2.5)
+Imports: MASS, e1071, randomForest

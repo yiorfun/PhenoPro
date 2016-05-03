@@ -1,14 +1,14 @@
-\name{PhenoPro}
+\name{readNews}
 \alias{PhenoPro}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-	This is PhenoPro
+	This is readNews
 }
 \description{
 %%  ~~ A concise (1-5 lines) description of what the function does. ~~
 }
 \usage{
-PhenoPro(x)
+readNews()
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -47,14 +47,7 @@ PhenoPro(x)
 ##--	or do  help(data=index)  for the standard data sets.
 
 ## The function is currently defined as
-data(sds)
-PhenoPro(sds, x = "Fs", y = "LIGHT", label = "R4DX.F",
-	defaultLabel = "D", block = "RowRun", orderby = "Time.n",
-	method = "SVM",
-	step = 1, width = 5,
-	cvNumber = 100,
-	testBlockProp = 0.2,
-	visualization = FALSE)
+readNews()
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

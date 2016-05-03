@@ -1,0 +1,18 @@
+VERSION 0.2.1
+- Fix informal argument that loads dataset sds;
+- Improve DESCRIPTION file, including sections of Depends and Imports;
+- Improve NAMESPACE file;
+- Add readNews() to display changes in new version;
+
+VERSION 0.2.0
+- Improve DESCRIPTION file, including sections of Title, Description, LazyData, Depends;
+- Add stop argument for error report;
+- Add a dataset named sds.rda and its documents;
+- Add an argument for printing current version;
+- Add step argument;
+- Add dependent packages;
+- Add new licence;
+- Add x and y arguments for multiple columns calculating;
+
+VERSION 0.1.0
+- It is an initial version which can be uploaded, downloaded and run sucessfully.

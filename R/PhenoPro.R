@@ -107,7 +107,7 @@ SplitData <- function(data, blockLabelName, block, label, orderby, testBlockProp
 }
 BAYNIGFUN <- function(x, y, step, width) {
 	# compute Bayesian NIG for any input without spliting
-	require(MASS)
+#	require(MASS)
 	R2FUN <- function(y, Est.y) return(1 - sum((y - Est.y) ^ 2) / sum((y - mean(y)) ^ 2))
 	BETAFUN <- function(x, y) return(lm(y ~ x)$coefficients)
 	BETAPHI2FUN <- function(x, Beta) return(Beta[1] + Beta[2] * x)
@@ -234,12 +234,12 @@ Prediction <- function(data, method, label, defaultLabel){
 		slope = InputTest$slope, 
 		label = InputTest$label)		
 	if(method == "RF"){
-		require(randomForest)
+#		require(randomForest)
 		par.rf <- randomForest(label ~ ., data = InputTrain, 
 			importance = TRUE, proximity = TRUE)
 		par.pred <- predict(par.rf, subset(InputTest, select = - label))	
 		} else{
-			require(e1071)
+#			require(e1071)
 			par.svm <- svm(label ~ ., data = InputTrain)
 			par.pred <- predict(par.svm, subset(InputTest, select = - label))
 		}

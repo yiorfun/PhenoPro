@@ -1,1 +1,4 @@
 exportPattern("^[[:alpha:]]+")
+importFrom("e1071", svm)
+importFrom("MASS", ginv)
+importFrom("randomForest", randomForest)
