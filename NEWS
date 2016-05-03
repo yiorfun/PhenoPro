@@ -1,8 +1,11 @@
+VERSION 0.2.2
+- Improve output in which matrix are associated with their names. 
+
 VERSION 0.2.1
 - Fix informal argument that loads dataset sds;
 - Improve DESCRIPTION file, including sections of Depends and Imports;
 - Improve NAMESPACE file;
-- Add readNews() to display changes in new version;
+- Add readNews() to display changes in new version.
 
 VERSION 0.2.0
 - Improve DESCRIPTION file, including sections of Title, Description, LazyData, Depends;
@@ -12,7 +15,7 @@ VERSION 0.2.0
 - Add step argument;
 - Add dependent packages;
 - Add new licence;
-- Add x and y arguments for multiple columns calculating;
+- Add x and y arguments for multiple columns calculating.
 
 VERSION 0.1.0
-- It is an initial version which can be uploaded, downloaded and run sucessfully.
+- Add the main function PhenoPro() to yield performance, recall and precision for each block.

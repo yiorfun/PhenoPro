@@ -280,7 +280,7 @@ PhenoPro <- function(data, x, y, label, defaultLabel, block, orderby,
 	
 	CheckInputArguments(data, x, y, label, defaultLabel, block, orderby,
 		method,	step, width, cvNumber, testBlockProp)
-	print("Current Version 0.2.0")
+#	print("Current Version 0.2.0")
 	WorkingData <- subset(data, select = c(x, y, label, block, orderby))
 	WorkingData <- na.omit(WorkingData)
 	WorkingData <- WorkingData[order(WorkingData[[orderby]], decreasing = FALSE), ]
@@ -293,9 +293,10 @@ PhenoPro <- function(data, x, y, label, defaultLabel, block, orderby,
 	outputTable <- data.frame(matrix(0, length(unique(WorkingData[[block]])), 3)) 
 	rownames(outputTable) <- unique(WorkingData[[block]])[order(unique(WorkingData[[block]]))]
 	colnames(outputTable) <- c("performance", "precision", "recall")	
-	output <- replicate(xcol * ycol, outputTable, simplify = FALSE)
-	outputNames <- rep(0, xcol * ycol)
-	k <- 1
+#	output <- replicate(xcol * ycol, outputTable, simplify = FALSE)
+#	outputNames <- rep(0, xcol * ycol)
+	output <- list()
+	xycol <- 1
 	for(i in seq(ycol)){
 		for(j in seq(xcol)){
 			outputTableTemp <- outputTable 
@@ -304,8 +305,8 @@ PhenoPro <- function(data, x, y, label, defaultLabel, block, orderby,
 			WorkingDataSub <- subset(WorkingData, 
 				select = c(y[i], x[j], label, block, orderby))
 			features <- c(y[i], x[j])
-			outputNamesTemp <- paste(y[i], x[j], sep = "-") 
-			outputNames[k] <- outputNamesTemp
+			outputNamesTemp <- paste(y[i], x[j], sep = "_") 
+#			outputNames[k] <- outputNamesTemp
 			while(inicvNumber <= cvNumber){
 				cat(paste("computing ", outputNamesTemp), inicvNumber, "\r")
 				valueSplitData <- SplitData(WorkingDataSub, blockLabelName, block, 
@@ -329,11 +330,11 @@ PhenoPro <- function(data, x, y, label, defaultLabel, block, orderby,
 				outputTableTemp[rowID, 3] <- outputTableTemp[rowID, 3] + 
 					WorkingDataTemp$recall
 			}
-			output[[k]] <- outputTableTemp / countTable
-			k <- k + 1
+			output[[outputNamesTemp]] <- outputTableTemp / countTable
+			xycol <- xycol + 1
 		}
 	}
-	return(list(output = output, outputNames = outputNames))
+	return(list(output = output))
 }
 
 
