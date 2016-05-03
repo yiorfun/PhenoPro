@@ -47,7 +47,7 @@ PhenoPro(x)
 ##--	or do  help(data=index)  for the standard data sets.
 
 ## The function is currently defined as
-data(sds)
+
 PhenoPro(sds, x = "Fs", y = "LIGHT", label = "R4DX.F",
 	defaultLabel = "D", block = "RowRun", orderby = "Time.n",
 	method = "SVM",

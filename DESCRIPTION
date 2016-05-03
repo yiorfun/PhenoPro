@@ -1,11 +1,11 @@
 Package: PhenoPro
 Type: Package
 Title: Analysis Ordered Data By XXX
-Version: 0.2.2
+Version: 0.3.0
 Author: Yifan Yang, Jin Chen
 Maintainer: Yifan Yang <yiorfun@gmail.com>
 Description: PhenoPro is a package which sloves the XXX.
 License: GPL-3
 LazyData: TRUE
 Depends: R (>= 3.2.5)
-Imports: MASS, e1071, randomForest
+Imports: MASS, e1071, randomForest, gridExtra, ggplot2

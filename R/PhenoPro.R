@@ -1,5 +1,5 @@
-CheckInputArguments <- function(data, x, y, label, defaultLabel, block, orderby,
-	method,	step, width, cvNumber, testBlockProp){
+	CheckInputArguments <- function(data, x, y, label, defaultLabel, block, orderby,
+	method,	step, width, cvNumber, testBlockProp, visualization){
 	if(is.null(data))
 		stop("'data' is missing")
 	if(!is.data.frame(data))
@@ -47,7 +47,10 @@ CheckInputArguments <- function(data, x, y, label, defaultLabel, block, orderby,
 		stop("'cvNumber' must be an integer")
 	if(testBlockProp < 0 | testBlockProp > 1)
 		stop("'testBlockProp' must be between 0 and 1")
+	if(!is.logical(visualization))
+		stop("'visualization' must be a logical value (TorF)")
 }
+
 CheckBlockStatus <- function(data, block, label){
 	n <- length(unique(data[[block]]))
 		blockOrderedNames <- unique(data[[block]])[order(unique(data[[block]]))]
@@ -70,6 +73,7 @@ CheckBlockStatus <- function(data, block, label){
 		}
 	return(list(data = returnData, blockLabelName = returnLabelName))
 }
+
 SplitData <- function(data, blockLabelName, block, label, orderby, testBlockProp){
 	blockOrderedNames <- unique(data[[block]])[order(unique(data[[block]]))]
 	blockID <- seq(length(blockOrderedNames))
@@ -105,9 +109,9 @@ SplitData <- function(data, blockLabelName, block, label, orderby, testBlockProp
 		testName = testName)	
 	return(list(data = returnData))
 }
+
 BAYNIGFUN <- function(x, y, step, width) {
 	# compute Bayesian NIG for any input without spliting
-#	require(MASS)
 	R2FUN <- function(y, Est.y) return(1 - sum((y - Est.y) ^ 2) / sum((y - mean(y)) ^ 2))
 	BETAFUN <- function(x, y) return(lm(y ~ x)$coefficients)
 	BETAPHI2FUN <- function(x, Beta) return(Beta[1] + Beta[2] * x)
@@ -133,18 +137,18 @@ BAYNIGFUN <- function(x, y, step, width) {
 		Linear.beta[ , i] <- BETAFUN(x.list[[i]], y.list[[i]])
 	}
 	Linear.sigma2 <- as.vector(mapply(SIGMAFUN, x = x.list, y = y.list))
-	for(i in seq(length(Linear.sigma2))){
-		if(is.nan(Linear.sigma2[i])) {
-			Linear.sigma2[i] <- runif(1, 0, 0.0001)
-		}
-	}
+#	for(i in seq(length(Linear.sigma2))){
+#		if(is.nan(Linear.sigma2[i])) {
+#			Linear.sigma2[i] <- runif(1, 0, 0.0001)
+#		}
+#	}
 	Linear.beta.mean <- apply(Linear.beta, 1, mean)
-	for(i in seq(ncol(Linear.beta))){
-		if(sum(abs(Linear.beta.mean - Linear.beta[ , i])) == 0){
-			temp <- rnorm(length(Linear.beta.mean), 0, 0.001)
-			Linear.beta.mean <- Linear.beta.mean + temp
-		}
-	}
+#	for(i in seq(ncol(Linear.beta))){
+#		if(sum(abs(Linear.beta.mean - Linear.beta[ , i])) == 0){
+#			temp <- rnorm(length(Linear.beta.mean), 0, 0.001)
+#			Linear.beta.mean <- Linear.beta.mean + temp
+#		}
+#	}
 	A <- matrix(0, 2, 2)
 	for(i in seq(WindowLength)) {
 		A <- A + tcrossprod(Linear.beta[ , i] - Linear.beta.mean) / Linear.sigma2[i] 
@@ -163,11 +167,11 @@ BAYNIGFUN <- function(x, y, step, width) {
 			(ginv(V.beta) %*% Linear.beta.mean + crossprod(X.t, y.t))
 		BayesNIG.beta[ , i] <- mu.star
 	}
-	
 	result <- list(Beta = BayesNIG.beta)
 	return(result)
 }
-BayesianNIG <- function(data, step, width, features, label) {
+
+BayesianNIGcv <- function(data, step, width, features, label) {
 	trainData <- data$train
 	testData <- data$test
 	
@@ -201,7 +205,6 @@ BayesianNIG <- function(data, step, width, features, label) {
 	slopeTestONE <- as.vector(BetaTest[2, ])
 	labelTestONE <- rep(unique(testData[[label]])[1], length(interceptTestONE))
 	
-	
 	testDataTWO <- testData[which(testData[[label]] == 
 		unique(testData[[label]])[2]), ]	
 	xTestTWO <- testDataTWO[[features[1]]]
@@ -217,6 +220,7 @@ BayesianNIG <- function(data, step, width, features, label) {
 	returnData <- list(train = BetaTrain, test = BetaTest)
 	return(returnData)
 }
+
 Prediction <- function(data, method, label, defaultLabel){
 	InputTrain <- data$train
 	InputTest <- data$test
@@ -270,17 +274,40 @@ Prediction <- function(data, method, label, defaultLabel){
 		
 }
 
+
+BayesianNIGdirect <- function(data, x, y, step, width, label){
+	dataONE <- data[which(data[[label]] == unique(data[[label]])[1]), ]
+	xONE <- dataONE[[x]]
+	yONE <- dataONE[[y]]
+	BetaONE <- BAYNIGFUN(xONE, yONE, step, width)$Beta	
+	interceptONE <- as.vector(BetaONE[1, ])
+	slopeONE <- as.vector(BetaONE[2, ])
+	labelONE <- rep(unique(data[[label]])[1], length(interceptONE))
 	
+	dataTWO <- data[which(data[[label]] == unique(data[[label]])[2]), ]
+	xTWO <- dataTWO[[x]]
+	yTWO <- dataTWO[[y]]
+	BetaTWO <- BAYNIGFUN(xTWO, yTWO, step, width)$Beta
+	interceptTWO <- as.vector(BetaTWO[1, ])
+	slopeTWO <- as.vector(BetaTWO[2, ])
+	labelTWO <- rep(unique(data[[label]])[2], length(interceptTWO))
+	
+	Beta <- data.frame(intercept = c(interceptONE, interceptTWO), 
+		slope = c(slopeONE, slopeTWO), label = c(labelONE, labelTWO))
+	return(Beta)
+}	
+
+
+
 PhenoPro <- function(data, x, y, label, defaultLabel, block, orderby,
 	method = "SVM",	
-	step = 1, width = 5, 
-	cvNumber = 1000, 
+	step = 1, width = 6, 
+	cvNumber = 100, 
 	testBlockProp = 0.2, 
 	visualization = FALSE){
 	
 	CheckInputArguments(data, x, y, label, defaultLabel, block, orderby,
-		method,	step, width, cvNumber, testBlockProp)
-#	print("Current Version 0.2.0")
+		method,	step, width, cvNumber, testBlockProp, visualization)
 	WorkingData <- subset(data, select = c(x, y, label, block, orderby))
 	WorkingData <- na.omit(WorkingData)
 	WorkingData <- WorkingData[order(WorkingData[[orderby]], decreasing = FALSE), ]
@@ -293,20 +320,17 @@ PhenoPro <- function(data, x, y, label, defaultLabel, block, orderby,
 	outputTable <- data.frame(matrix(0, length(unique(WorkingData[[block]])), 3)) 
 	rownames(outputTable) <- unique(WorkingData[[block]])[order(unique(WorkingData[[block]]))]
 	colnames(outputTable) <- c("performance", "precision", "recall")	
-#	output <- replicate(xcol * ycol, outputTable, simplify = FALSE)
-#	outputNames <- rep(0, xcol * ycol)
 	output <- list()
 	xycol <- 1
-	for(i in seq(ycol)){
-		for(j in seq(xcol)){
+	for(i in seq(xcol)){
+		for(j in seq(ycol)){
 			outputTableTemp <- outputTable 
 			countTable <- rep(0, length(unique(WorkingData[[block]])))
 			inicvNumber <- 1
 			WorkingDataSub <- subset(WorkingData, 
-				select = c(y[i], x[j], label, block, orderby))
-			features <- c(y[i], x[j])
-			outputNamesTemp <- paste(y[i], x[j], sep = "_") 
-#			outputNames[k] <- outputNamesTemp
+				select = c(x[i], y[j], label, block, orderby))
+			features <- c(x[i], y[j])
+			outputNamesTemp <- paste(x[i], y[j], sep = "_") 
 			while(inicvNumber <= cvNumber){
 				cat(paste("computing ", outputNamesTemp), inicvNumber, "\r")
 				valueSplitData <- SplitData(WorkingDataSub, blockLabelName, block, 
@@ -314,7 +338,8 @@ PhenoPro <- function(data, x, y, label, defaultLabel, block, orderby,
 				dataSplitData <- valueSplitData$data
 				WorkingDataTemp <- dataSplitData
 				testNameTemp <- WorkingDataTemp$testName
-				WorkingDataTemp <- BayesianNIG(WorkingDataTemp, step, width, features, label)
+				
+				WorkingDataTemp <- BayesianNIGcv(WorkingDataTemp, step, width, features, label)
 				valuePrediction <- Prediction(WorkingDataTemp, method, label, defaultLabel)
 				
 				dataPrediction <- valuePrediction$data
@@ -331,11 +356,28 @@ PhenoPro <- function(data, x, y, label, defaultLabel, block, orderby,
 					WorkingDataTemp$recall
 			}
 			output[[outputNamesTemp]] <- outputTableTemp / countTable
+			if(visualization){
+				WorkingDataPlot <- subset(WorkingData, 
+					select = c(x[i], y[j], label))
+				PredictDataPlot <- BayesianNIGdirect(WorkingDataPlot, 
+					x = x[i], y = y[j], step, width, label)
+				p1 <- ggplot() + 
+					geom_point(data = WorkingDataPlot, 
+					mapping = aes(WorkingData[[x[j]]], WorkingData[[y[i]]], 
+						colour = factor(WorkingData[[label]]))) +
+					xlab(x[i]) +
+					ylab(y[j]) +
+					theme(legend.position = "none")
+				p2 <- ggplot() + 
+					geom_point(data = PredictDataPlot, 
+					mapping = aes(intercept, slope, 
+						colour = label))
+				p12 <- grid.arrange(p1, p2, ncol = 2)
+				p12
+			}
 			xycol <- xycol + 1
 		}
 	}
 	return(list(output = output))
 }
-
-
 

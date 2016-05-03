@@ -1,3 +1,10 @@
+VERSION 0.3.0
+- Add visualization argument;
+- Add process to check visualization argument;
+- Improve DESCRIPTION file, including sections of Depends and Imports;
+- Improve NAMESPACE file; 
+- Fix a bug that impacts on variable orders.
+
 VERSION 0.2.2
 - Improve output in which matrix are associated with their names. 
 
