@@ -1,3 +1,12 @@
+VERSION 0.3.1
+- Improve block argument that allows NULL or two columns as input;
+- Improve orderby argument that allows NULL as input;
+- New built-in CheckInputArguments() function; 
+- New built-in TransferData() function;
+- Improve DESCRIPTION file, including sections of Depends and Imports;
+- Improve NAMESPACE file; 
+- Add a new dataset named sds.rda which block and label have two and three components.
+
 VERSION 0.3.0
 - Add visualization argument;
 - Add process to check visualization argument;

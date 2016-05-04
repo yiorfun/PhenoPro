@@ -1,54 +1,100 @@
-	CheckInputArguments <- function(data, x, y, label, defaultLabel, block, orderby,
-	method,	step, width, cvNumber, testBlockProp, visualization){
-	if(is.null(data))
-		stop("'data' is missing")
-	if(!is.data.frame(data))
-		stop("'data' must be a data frame")
+CheckInputArguments <- function(data, x, y, label, defaultLabel, block, orderby, 
+	method, step, width, cvNumber, testBlockProp, visualization){
+	
+	# check data argument
+	if(is.numeric(nrow(data)) != TRUE)
+		stop("invalid 'data'")
 	if(nrow(na.omit(data)) == 0)
-		stop("invalid 'data' argument")
-	argNames <- colnames(data)
-	if(!all(x %in% argNames))
-		stop("'x' has unknown column")
-	if(!all(y %in% argNames))
-		stop("'y' has unknown column")
-	if(is.null(label))
-		stop("'label' is missing")
-	if(!(label %in% argNames))
-		stop("'data' does not include 'label'")
-	if(length(label) != 1)
-		stop("'label' must be 1-dimension vector")
-	if(is.null(defaultLabel))
-		stop("'defaultLabel' is missing")
-	if(!(defaultLabel %in% data[[label]]))
-		stop("'defaultLabel' must be an element of 'label'")
-	if(length(defaultLabel) != 1)
-		stop("'defaultLabel' must be 1-dimension vector")
-	if(is.null(block))
-		stop("'block' is missing")
-	if(!(block %in% argNames))
-		stop("'data' does not include 'block'")
-	if(length(block) != 1)
-		stop("'block' must be 1-dimension vector")
+		stop("invalid 'data' after removing NA vaule")
+	
+	# check x, y arguments
+	if((is.null(x) | is.null(y)) == TRUE)
+		stop("invalid 'x' or 'y'")
+	
+	# check names, replicated names are allowed by using [[]]
+	varNames <- colnames(data)
+	inputNames <- c(x, y, label, block, orderby)
+	if(all(inputNames %in% varNames) != TRUE)
+		stop("invalid argument names")
+	
+	# check label and defaultLabel arguments
+	if(!is.null(label) & is.null(defaultLabel))
+		stop("invalid 'defaultLabel' but 'label' exists")
+	if(!is.null(defaultLabel) & is.null(label))
+		stop("invalid 'label' but 'defaultLabel' exists")
+	if(!is.null(label) & length(label) >= 2)
+		stop("invalid 'label', at most 1 dimension")
+	if(!is.null(label) & length(unique(data[[label]])) < 2)
+		stop("invalid 'label', which at least has two different components")
+	if(!is.null(defaultLabel) & length(defaultLabel) >= 2)
+		stop("invalid 'defaultLabel', at most 1 dimension")
+	if(!is.null(defaultLabel) & !(defaultLabel %in% unique(data[[label]])))
+		stop("invalid 'defaultLabel', which should be any component of 'label'")
+	
+	# check block argument
+	if(!is.null(block) & length(block) > 2)
+		stop("invalid 'block', at most 2 dimensions")
+	
+	# check orderby argument
+	if(!is.null(orderby) & length(orderby) >= 2)
+		stop("invalid 'orderby', at most 1 dimension")
+	
+	# check method argument	
 	if(!(method %in% c("SVM", "RF")))
-		stop("invalid 'method' argument")
+		stop("invalid 'method', only 'SVM' and 'RF' are available")
 	if(length(method) != 1)
-		stop("'method' must be only one")
-	if(is.null(orderby))
-		stop("'orderby' is missing")
-	if(!(orderby %in% argNames))
-		stop("'data' does not include orderby")
-	if(length(orderby) != 1)
-		stop("'orderby' must be 1-dimension vector")
+		stop("invalid 'method', at most 1 dimension")
+	
+	# check step and width arguments
 	if(!(step == round(step)))
-		stop("'step' must be an integer")
+		stop("invalid 'step', it must be an integer")
 	if(!(width == round(width)))
-		stop("'width' must be an integer")
+		stop("invalid 'width', it must be an integer")
+	
+	# check cvNumber and testBlockProp arguments
 	if(!(cvNumber == round(cvNumber)))
-		stop("'cvNumber' must be an integer")
+		stop("invalid 'cvNumber', it must be an integer")
 	if(testBlockProp < 0 | testBlockProp > 1)
-		stop("'testBlockProp' must be between 0 and 1")
+		stop("invalid 'testBlockProp', it must be between 0 and 1")
+	
+	# check visualization argument
 	if(!is.logical(visualization))
-		stop("'visualization' must be a logical value (TorF)")
+		stop("invalid 'visualization', it must be a logical value (TorF)")
+}
+
+TransferData <- function(data, x, y, label, defaultLabel, block, orderby){
+	
+	# to data frame
+	WorkingData <- as.data.frame(data)
+	WorkingData <- na.omit(WorkingData)
+	
+	# block argument
+	if(is.null(block)){
+		WorkingData$blockTemp <- seq(nrow(WorkingData))
+		block <- "blockTemp"
+	} else{
+		if(length(block) == 2){
+			WorkingData$blockTemp <- paste(WorkingData[[block[1]]], 
+				WorkingData[[block[2]]], sep = "")
+			block <- "blockTemp"
+		}
+	}
+	
+	# orderby argument
+	if(is.null(orderby)){
+		warning("missing 'orderby', data is ordered by default")
+		WorkingData$orderbyTemp <- seq(nrow(WorkingData))
+		orderby <- "orderbyTemp"
+	}
+	
+	# select subset data
+	if(!is.null(label) & !is.null(defaultLabel)){
+		WorkingDataSub <- subset(WorkingData, select = c(
+			x, y, label, block, orderby))
+		WorkingDataSub <- WorkingDataSub[order(WorkingDataSub[[orderby]], 
+			decreasing = FALSE), ]
+	}
+	return(list(data = WorkingDataSub, block = block, orderby = orderby))
 }
 
 CheckBlockStatus <- function(data, block, label){
@@ -298,19 +344,35 @@ BayesianNIGdirect <- function(data, x, y, step, width, label){
 }	
 
 
-
-PhenoPro <- function(data, x, y, label, defaultLabel, block, orderby,
+PhenoPro <- function(
+	data = NULL, 
+	x = NULL, 
+	y = NULL, 
+	label = NULL, 
+	defaultLabel = NULL, 
+	block = NULL, 
+	orderby = NULL,
 	method = "SVM",	
-	step = 1, width = 6, 
+	step = 1, width = 5, 
 	cvNumber = 100, 
 	testBlockProp = 0.2, 
 	visualization = FALSE){
 	
 	CheckInputArguments(data, x, y, label, defaultLabel, block, orderby,
 		method,	step, width, cvNumber, testBlockProp, visualization)
-	WorkingData <- subset(data, select = c(x, y, label, block, orderby))
-	WorkingData <- na.omit(WorkingData)
-	WorkingData <- WorkingData[order(WorkingData[[orderby]], decreasing = FALSE), ]
+	
+	x.raw <- x
+	y.raw <- y
+	label.raw <- label
+	defaultLabel.raw <- defaultLabel
+	block.raw <- block
+	orderby.raw <- orderby
+	
+	valueTransferData <- TransferData(data, x, y, label, defaultLabel, block, orderby)
+	WorkingData <- valueTransferData$data
+	block <- valueTransferData$block
+	orderby <- valueTransferData$orderby
+	
 	valueCheckBlockStatus <- CheckBlockStatus(WorkingData, block, label)
 	blockLabelName <- valueCheckBlockStatus$blockLabelName
 	WorkingData <- valueCheckBlockStatus$data
@@ -318,7 +380,8 @@ PhenoPro <- function(data, x, y, label, defaultLabel, block, orderby,
 	xcol <- length(x)
 	ycol <- length(y)
 	outputTable <- data.frame(matrix(0, length(unique(WorkingData[[block]])), 3)) 
-	rownames(outputTable) <- unique(WorkingData[[block]])[order(unique(WorkingData[[block]]))]
+	
+	rownames(outputTable) <- mixedsort(unique(WorkingData[[block]]))
 	colnames(outputTable) <- c("performance", "precision", "recall")	
 	output <- list()
 	xycol <- 1
