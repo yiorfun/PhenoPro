@@ -424,7 +424,7 @@ PhenoPro <- function(
 					labelUniqueNames)
 				p1 <- ggplot() + 
 					geom_point(data = WorkingDataPlot, 
-					mapping = aes(WorkingData[[x[j]]], WorkingData[[y[i]]], 
+					mapping = aes(WorkingData[[x[i]]], WorkingData[[y[j]]], 
 						colour = factor(WorkingData[[label]]))) +
 					xlab(x[i]) +
 					ylab(y[j]) +
