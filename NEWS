@@ -1,17 +1,27 @@
+VERSION 0.4.0
+- Delete CheckBlockStatus() function;
+- Improve the return of unique() function;
+- Improve SplitData() function;
+- Improve BayesianNIGcv() function;
+- Add inverseLabel argument that might have multiple components;
+- Improve BayesianNIGdirect() function;
+- Improve PhenoPro() function that allows number of label can be larger than 2;
+- Improve Predict() function while still remain some problems.
+
 VERSION 0.3.1
 - Improve block argument that allows NULL or two columns as input;
 - Improve orderby argument that allows NULL as input;
-- New built-in CheckInputArguments() function; 
-- New built-in TransferData() function;
-- Improve DESCRIPTION file, including sections of Depends and Imports;
-- Improve NAMESPACE file; 
-- Add a new dataset named sds.rda which block and label have two and three components.
+- Add built-in CheckInputArguments() function; 
+- Add built-in TransferData() function;
+- Improve DESCRIPTION file, Imports: gtools;
+- Improve NAMESPACE file, mixedsort(); 
+- Add a new dataset named sds.rda which block and label have two and three components;
 
 VERSION 0.3.0
 - Add visualization argument;
 - Add process to check visualization argument;
-- Improve DESCRIPTION file, including sections of Depends and Imports;
-- Improve NAMESPACE file; 
+- Improve DESCRIPTION file, Imports: ggplot2, gridExtra;
+- Improve NAMESPACE file, grid.arrange() and import(ggplot2); 
 - Fix a bug that impacts on variable orders.
 
 VERSION 0.2.2
@@ -19,8 +29,8 @@ VERSION 0.2.2
 
 VERSION 0.2.1
 - Fix informal argument that loads dataset sds;
-- Improve DESCRIPTION file, including sections of Depends and Imports;
-- Improve NAMESPACE file;
+- Improve DESCRIPTION file, Imports: MASS, e1071, randomForest;
+- Improve NAMESPACE file, ginv(), svm(), randomForest();
 - Add readNews() to display changes in new version.
 
 VERSION 0.2.0

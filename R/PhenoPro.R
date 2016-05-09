@@ -26,8 +26,8 @@ CheckInputArguments <- function(data, x, y, label, defaultLabel, block, orderby,
 		stop("invalid 'label', at most 1 dimension")
 	if(!is.null(label) & length(unique(data[[label]])) < 2)
 		stop("invalid 'label', which at least has two different components")
-	if(!is.null(defaultLabel) & length(defaultLabel) >= 2)
-		stop("invalid 'defaultLabel', at most 1 dimension")
+	if(!is.null(defaultLabel) & length(defaultLabel) >= length(unique(data[[label]])))
+		stop("invalid 'defaultLabel', it must have less components than 'label'")	
 	if(!is.null(defaultLabel) & !(defaultLabel %in% unique(data[[label]])))
 		stop("invalid 'defaultLabel', which should be any component of 'label'")
 	
@@ -97,62 +97,40 @@ TransferData <- function(data, x, y, label, defaultLabel, block, orderby){
 	return(list(data = WorkingDataSub, block = block, orderby = orderby))
 }
 
-CheckBlockStatus <- function(data, block, label){
-	n <- length(unique(data[[block]]))
-		blockOrderedNames <- unique(data[[block]])[order(unique(data[[block]]))]
-		blockLabelNumber <- rep(0, n)
-		blockLabelName <- rep(0, n)
-		for(i in seq(n)){
-			subdata <- data[which(data[[block]] == blockOrderedNames[i]) , ]
-			blockLabelNumber[i] <- length(unique(subdata[[label]]))
-			if(blockLabelNumber[i] == 1){
-				blockLabelName[i] <- unique(subdata[[label]]) 
-			} else{
-				blockLabelName[i] <- NULL
-			}
-		}
-		if(sum(blockLabelNumber) == n){
-			returnData <- data
-			returnLabelName <- blockLabelName
-		} else{
-			stop("'block' has multiple labels")
-		}
-	return(list(data = returnData, blockLabelName = returnLabelName))
-}
-
-SplitData <- function(data, blockLabelName, block, label, orderby, testBlockProp){
-	blockOrderedNames <- unique(data[[block]])[order(unique(data[[block]]))]
-	blockID <- seq(length(blockOrderedNames))
-	blockDataFrame <- data.frame(Name = blockOrderedNames, ID = blockID, 
-		Label = blockLabelName)
-	subONE <- subset(blockDataFrame, Label == unique(blockLabelName)[1])
-	subTWO <- subset(blockDataFrame, Label == unique(blockLabelName)[2])
-	blockNumberONE <- nrow(subONE)
-	blockNumberTWO <- nrow(subTWO)
-	testSizeONE <- round(testBlockProp * blockNumberONE)
-	testSizeTWO <- round(testBlockProp * blockNumberTWO)	
-	testIDONE <- sample(blockNumberONE, size = testSizeONE, 
-		replace = FALSE, prob = rep(1 / blockNumberONE, blockNumberONE))
-	testIDONE <- testIDONE[order(testIDONE)]
-	trainIDONE <- seq(blockNumberONE)[- testIDONE]
-	testIDTWO <- sample(blockNumberTWO, size = testSizeTWO, 
-		replace = FALSE, prob = rep(1 / blockNumberTWO, blockNumberTWO))
-	testIDTWO <- testIDTWO[order(testIDTWO)]
-	trainIDTWO <- seq(blockNumberTWO)[- testIDTWO]
-		
-	testName <- c(subONE[testIDONE, ]$Name, subTWO[testIDTWO, ]$Name)
-	testName <- testName[order(testName)]
-	testName <- blockOrderedNames[testName]
-	trainName <- c(subONE[trainIDONE, ]$Name, subTWO[trainIDTWO, ]$Name)
-	trainName <- trainName[order(trainName)]
-	trainName <- blockOrderedNames[trainName]
-		
-	testData <- data[which(data[[block]] %in% testName), ]
+SplitData <- function(data, block, orderby, 
+	testBlockProp, blockOrderedLabels, blockOrderedNames){
+	
+	blockDataFrame <- data.frame(Name = blockOrderedNames, 
+		Label = blockOrderedLabels)
+	
+	splitDatabyLabels <- split(blockDataFrame, blockDataFrame$Label)
+	countSplitDatabyLabels <- sapply(splitDatabyLabels, nrow, simplify = TRUE)
+	countNamesTemp <- names(countSplitDatabyLabels)
+	countLabelsTemp <- as.vector(countSplitDatabyLabels)
+	testSizes <- ceiling(countLabelsTemp * testBlockProp)
+	
+	FUNSAMPLE <- function(x, y){
+		return(sample(x, size = y, replace = FALSE,
+			prob = rep(1 / x, x)))
+	}
+	testSample <- mapply(FUNSAMPLE, x = countLabelsTemp, y = testSizes)
+	names(testSample) <- countNamesTemp
+	testNames <- c()
+	for(i in seq(length(countNamesTemp))){
+		testNames <- c(testNames, 
+			splitDatabyLabels[[i]][testSample[[i]], ]$Name)
+	}
+	trainNames <- seq(nrow(blockDataFrame))[- testNames]
+	testNames <- blockDataFrame$Name[mixedsort(testNames)]
+	trainNames <- blockDataFrame$Name[mixedsort(trainNames)]
+	
+	testData <- data[which(data[[block]] %in% testNames), ]
 	testData <- testData[order(testData[[orderby]]), ]
-	trainData <- data[which(data[[block]] %in% trainName), ]
+	trainData <- data[which(data[[block]] %in% trainNames), ]
 	trainData <- trainData[order(trainData[[orderby]]), ]
+	
 	returnData <- list(test = testData, train = trainData, 
-		testName = testName)	
+		testName = testNames)	
 	return(list(data = returnData))
 }
 
@@ -217,64 +195,59 @@ BAYNIGFUN <- function(x, y, step, width) {
 	return(result)
 }
 
-BayesianNIGcv <- function(data, step, width, features, label) {
+BayesianNIGcv <- function(data, step, width, features, label,
+	labelUniqueNames) {
 	trainData <- data$train
 	testData <- data$test
+
+	splitTrainDatabyLabels <- split(trainData, trainData[[label]])
+	splitTrainDataLabelNames <- names(splitTrainDatabyLabels)
+	splitTestDatabyLabels <- split(testData, testData[[label]])
+	splitTestDataLabelNames <- names(splitTestDatabyLabels)
+	interceptTrain <- c()
+	slopeTrain <- c()
+	labelTrain <- c()
+	interceptTest <- c()
+	slopeTest <- c()
+	labelTest <- c()
+	for(i in seq(length(labelUniqueNames))){
+		trainDataTemp <- splitTrainDatabyLabels[[i]] 
+		xTrainTemp <- trainDataTemp[[features[1]]]
+		yTrainTemp <- trainDataTemp[[features[2]]]
+		betaTrainTemp <- BAYNIGFUN(xTrainTemp, yTrainTemp, step, width)$Beta
+		interceptTrainTemp <- as.vector(betaTrainTemp[1, ])
+		interceptTrain <- c(interceptTrain, interceptTrainTemp)
+		slopeTrainTemp <- as.vector(betaTrainTemp[2, ])
+		slopeTrain <- c(slopeTrain, slopeTrainTemp)
+		labelTrain <- c(labelTrain, rep(splitTrainDataLabelNames[i], 
+			length(interceptTrainTemp)))
+			
+		testDataTemp <- splitTestDatabyLabels[[i]] 
+		xTestTemp <- testDataTemp[[features[1]]]
+		yTestTemp <- testDataTemp[[features[2]]]
+		betaTestTemp <- BAYNIGFUN(xTestTemp, yTestTemp, step, width)$Beta
+		interceptTestTemp <- as.vector(betaTestTemp[1, ])
+		interceptTest <- c(interceptTest, interceptTestTemp)
+		slopeTestTemp <- as.vector(betaTestTemp[2, ])
+		slopeTest <- c(slopeTest, slopeTestTemp)
+		labelTest <- c(labelTest, rep(splitTestDataLabelNames[i], 
+			length(interceptTestTemp)))
+	}
+	betaTrain <- list(intercept = interceptTrain, 
+		slope = slopeTrain, 
+		label = labelTrain)
+	betaTest <- list(intercept = interceptTest, 
+		slope = slopeTest, 
+		label = labelTest)
 	
-	trainDataONE <- trainData[which(trainData[[label]] == 
-		unique(trainData[[label]])[1]), ]
-	xTrainONE <- trainDataONE[[features[1]]]
-	yTrainONE <- trainDataONE[[features[2]]]
-	BetaONE <- BAYNIGFUN(xTrainONE, yTrainONE, step, width)$Beta
-	interceptTrainONE <- as.vector(BetaONE[1, ])
-	slopeTrainONE <- as.vector(BetaONE[2, ])
-	labelTrainONE <- rep(unique(trainData[[label]])[1], length(interceptTrainONE))
-	
-	trainDataTWO <- trainData[which(trainData[[label]] == 
-		unique(trainData[[label]])[2]), ]
-	xTrainTWO <- trainDataTWO[[features[1]]]
-	yTrainTWO <- trainDataTWO[[features[2]]]
-	BetaTWO <- BAYNIGFUN(xTrainTWO, yTrainTWO, step, width)$Beta
-	interceptTrainTWO <- as.vector(BetaTWO[1, ])
-	slopeTrainTWO <- as.vector(BetaTWO[2, ])
-	labelTrainTWO <- rep(unique(trainData[[label]])[2], length(interceptTrainTWO))
-	
-	BetaTrain <- list(intercept = c(interceptTrainONE, interceptTrainTWO), 
-		slope = c(slopeTrainONE, slopeTrainTWO), label = c(labelTrainONE, labelTrainTWO))
-	
-	testDataONE <- testData[which(testData[[label]] == 
-		unique(testData[[label]])[1]), ]	
-	xTestONE <- testDataONE[[features[1]]]
-	yTestONE <- testDataONE[[features[2]]]
-	BetaTest <- BAYNIGFUN(xTestONE, yTestONE, step, width)$Beta
-	interceptTestONE <- as.vector(BetaTest[1, ])
-	slopeTestONE <- as.vector(BetaTest[2, ])
-	labelTestONE <- rep(unique(testData[[label]])[1], length(interceptTestONE))
-	
-	testDataTWO <- testData[which(testData[[label]] == 
-		unique(testData[[label]])[2]), ]	
-	xTestTWO <- testDataTWO[[features[1]]]
-	yTestTWO <- testDataTWO[[features[2]]]
-	BetaTest <- BAYNIGFUN(xTestTWO, yTestTWO, step, width)$Beta
-	interceptTestTWO <- as.vector(BetaTest[1, ])
-	slopeTestTWO <- as.vector(BetaTest[2, ])
-	labelTestTWO <- rep(unique(testData[[label]])[2], length(interceptTestTWO))
-	
-	BetaTest <- list(intercept = c(interceptTestONE, interceptTestTWO), 
-		slope = c(slopeTestONE, slopeTestTWO), label = c(labelTestONE, labelTestTWO))
-		
-	returnData <- list(train = BetaTrain, test = BetaTest)
+	returnData <- list(train = betaTrain, test = betaTest)
 	return(returnData)
 }
 
-Prediction <- function(data, method, label, defaultLabel){
+Prediction <- function(data, method, label, defaultLabel, inverseLabel){
 	InputTrain <- data$train
 	InputTest <- data$test
-	if(defaultLabel == unique(InputTrain$label)[1]){
-		inverseLabel <- unique(InputTrain$label)[2]
-	} else{
-		inverseLabel <- unique(InputTrain$label)[1]
-	}
+
 	InputTrain <- data.frame(
 		intercept = InputTrain$intercept,
 		slope = InputTrain$slope, 
@@ -296,16 +269,18 @@ Prediction <- function(data, method, label, defaultLabel){
 	DI <- DD <- II <- ID <- 0
 	for(i in seq(length(par.pred))){
 		if(par.pred[i] == InputTest$label[i]){
-			if(par.pred[i] == inverseLabel){
+			if(par.pred[i] %in% inverseLabel){
 				II <- II + 1
 			} else{
 				DD <- DD + 1
 			}
 		} else{
-			if(par.pred[i] == inverseLabel){
-				ID <- ID + 1
+			if(par.pred[i] == defaultLabel){
+				DI <- DI + 1			
 			} else{
-				DI <- DI + 1
+				if(InputTest$label[i] == defaultLabel){
+					ID <- ID + 1
+				}
 			}
 		}
 	}
@@ -321,25 +296,30 @@ Prediction <- function(data, method, label, defaultLabel){
 }
 
 
-BayesianNIGdirect <- function(data, x, y, step, width, label){
-	dataONE <- data[which(data[[label]] == unique(data[[label]])[1]), ]
-	xONE <- dataONE[[x]]
-	yONE <- dataONE[[y]]
-	BetaONE <- BAYNIGFUN(xONE, yONE, step, width)$Beta	
-	interceptONE <- as.vector(BetaONE[1, ])
-	slopeONE <- as.vector(BetaONE[2, ])
-	labelONE <- rep(unique(data[[label]])[1], length(interceptONE))
+BayesianNIGdirect <- function(data, step, width, label, features, 
+	labelUniqueNames){
 	
-	dataTWO <- data[which(data[[label]] == unique(data[[label]])[2]), ]
-	xTWO <- dataTWO[[x]]
-	yTWO <- dataTWO[[y]]
-	BetaTWO <- BAYNIGFUN(xTWO, yTWO, step, width)$Beta
-	interceptTWO <- as.vector(BetaTWO[1, ])
-	slopeTWO <- as.vector(BetaTWO[2, ])
-	labelTWO <- rep(unique(data[[label]])[2], length(interceptTWO))
-	
-	Beta <- data.frame(intercept = c(interceptONE, interceptTWO), 
-		slope = c(slopeONE, slopeTWO), label = c(labelONE, labelTWO))
+	splitDatabyLabels <- split(data, data[[label]])
+	splitDataLabelNames <- names(splitDatabyLabels)
+	interceptSplitData <- c()
+	slopeSplitData <- c()
+	labelSplitData <- c()
+
+	for(i in seq(length(labelUniqueNames))){
+		DataTemp <- splitDatabyLabels[[i]] 
+		xTemp <- DataTemp[[features[1]]]
+		yTemp <- DataTemp[[features[2]]]
+		betaTemp <- BAYNIGFUN(xTemp, yTemp, step, width)$Beta
+		interceptTemp <- as.vector(betaTemp[1, ])
+		interceptSplitData <- c(interceptSplitData, interceptTemp)
+		slopeTemp <- as.vector(betaTemp[2, ])
+		slopeSplitData <- c(slopeSplitData, slopeTemp)
+		labelSplitData <- c(labelSplitData, rep(splitDataLabelNames[i], 
+			length(interceptTemp)))
+	}
+	Beta <- data.frame(intercept = interceptSplitData, 
+		slope = slopeSplitData, 
+		label = labelSplitData)
 	return(Beta)
 }	
 
@@ -361,34 +341,49 @@ PhenoPro <- function(
 	CheckInputArguments(data, x, y, label, defaultLabel, block, orderby,
 		method,	step, width, cvNumber, testBlockProp, visualization)
 	
-	x.raw <- x
-	y.raw <- y
-	label.raw <- label
-	defaultLabel.raw <- defaultLabel
-	block.raw <- block
-	orderby.raw <- orderby
+	ret.x <- x
+	ret.y <- y
+	ret.label <- label
+	ret.defaultLabel <- defaultLabel
+	ret.block <- block
+	ret.orderby <- orderby
 	
-	valueTransferData <- TransferData(data, x, y, label, defaultLabel, block, orderby)
+	valueTransferData <- TransferData(data, x, y, label, defaultLabel, 
+		block, orderby)
 	WorkingData <- valueTransferData$data
 	block <- valueTransferData$block
 	orderby <- valueTransferData$orderby
 	
-	valueCheckBlockStatus <- CheckBlockStatus(WorkingData, block, label)
-	blockLabelName <- valueCheckBlockStatus$blockLabelName
-	WorkingData <- valueCheckBlockStatus$data
+	blockUniqueNames <- unique(WorkingData[[block]])
+	blockOrderedNames <- mixedsort(blockUniqueNames)
+	labelUniqueNames <- unique(WorkingData[[label]])
+	defaultLabelUniqueNames <- defaultLabel
+	inverseLabel <- labelUniqueNames[-which(labelUniqueNames == defaultLabel)]
+	
+	splitDatabyBlock <- split(WorkingData, WorkingData[[block]])
+	FUNALLEQU <- function(x, label){
+		return(!any(x[[label]] != x[[label]][1]))
+	}
+	FUNLABEL <- function(x, label){
+		return(x[[label]][1])
+	}
+	if(!all(sapply(splitDatabyBlock, FUNALLEQU, label = label, simplify = TRUE)))
+		stop("data in some 'block' have multiple 'label'")
+	blockOrderedLabels <- as.vector(sapply(splitDatabyBlock, FUNLABEL, 
+		label = label, simplify = TRUE))
 	
 	xcol <- length(x)
 	ycol <- length(y)
-	outputTable <- data.frame(matrix(0, length(unique(WorkingData[[block]])), 3)) 
+	outputTable <- data.frame(matrix(0, length(blockUniqueNames), 3)) 
 	
-	rownames(outputTable) <- mixedsort(unique(WorkingData[[block]]))
+	rownames(outputTable) <- blockOrderedNames
 	colnames(outputTable) <- c("performance", "precision", "recall")	
 	output <- list()
 	xycol <- 1
 	for(i in seq(xcol)){
 		for(j in seq(ycol)){
 			outputTableTemp <- outputTable 
-			countTable <- rep(0, length(unique(WorkingData[[block]])))
+			countTable <- rep(0, length(blockUniqueNames))
 			inicvNumber <- 1
 			WorkingDataSub <- subset(WorkingData, 
 				select = c(x[i], y[j], label, block, orderby))
@@ -396,14 +391,16 @@ PhenoPro <- function(
 			outputNamesTemp <- paste(x[i], y[j], sep = "_") 
 			while(inicvNumber <= cvNumber){
 				cat(paste("computing ", outputNamesTemp), inicvNumber, "\r")
-				valueSplitData <- SplitData(WorkingDataSub, blockLabelName, block, 
-					label, orderby, testBlockProp)
+				valueSplitData <- SplitData(WorkingDataSub, block, orderby, 
+	testBlockProp, blockOrderedLabels, blockOrderedNames)
 				dataSplitData <- valueSplitData$data
 				WorkingDataTemp <- dataSplitData
 				testNameTemp <- WorkingDataTemp$testName
 				
-				WorkingDataTemp <- BayesianNIGcv(WorkingDataTemp, step, width, features, label)
-				valuePrediction <- Prediction(WorkingDataTemp, method, label, defaultLabel)
+				WorkingDataTemp <- BayesianNIGcv(WorkingDataTemp, step, 
+					width, features, label, labelUniqueNames)
+				valuePrediction <- Prediction(WorkingDataTemp, method, 
+					label, defaultLabel, inverseLabel)
 				
 				dataPrediction <- valuePrediction$data
 				testName <- testNameTemp
@@ -423,7 +420,8 @@ PhenoPro <- function(
 				WorkingDataPlot <- subset(WorkingData, 
 					select = c(x[i], y[j], label))
 				PredictDataPlot <- BayesianNIGdirect(WorkingDataPlot, 
-					x = x[i], y = y[j], step, width, label)
+					step, width, label, features,
+					labelUniqueNames)
 				p1 <- ggplot() + 
 					geom_point(data = WorkingDataPlot, 
 					mapping = aes(WorkingData[[x[j]]], WorkingData[[y[i]]], 
@@ -443,4 +441,3 @@ PhenoPro <- function(
 	}
 	return(list(output = output))
 }
-
