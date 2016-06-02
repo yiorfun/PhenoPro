@@ -1,3 +1,6 @@
+VERSION 0.4.1
+- Fix a bug that return of "mapply" is not a list when test sample size are equal, testSample <- mapply(...,SIMPLIFY = FALSE)
+
 VERSION 0.4.0
 - Delete CheckBlockStatus() function;
 - Improve the return of unique() function;

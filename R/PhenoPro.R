@@ -113,7 +113,8 @@ SplitData <- function(data, block, orderby,
 		return(sample(x, size = y, replace = FALSE,
 			prob = rep(1 / x, x)))
 	}
-	testSample <- mapply(FUNSAMPLE, x = countLabelsTemp, y = testSizes)
+	testSample <- mapply(FUNSAMPLE, x = countLabelsTemp, y = testSizes, 
+		SIMPLIFY = FALSE)
 	names(testSample) <- countNamesTemp
 	testNames <- c()
 	for(i in seq(length(countNamesTemp))){
