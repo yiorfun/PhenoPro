@@ -5,4 +5,5 @@ importFrom("randomForest", randomForest)
 import(ggplot2)
 importFrom("gridExtra", grid.arrange)
 importFrom("gtools", mixedsort)
-
+import(viridis)
+import(ggthemes)

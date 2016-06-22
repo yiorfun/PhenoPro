@@ -1,14 +1,14 @@
-\name{PhenoPro}
-\alias{PhenoPro}
+\name{Pheno}
+\alias{Pheno}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-	This is PhenoPro
+	This is Pheno
 }
 \description{
 %%  ~~ A concise (1-5 lines) description of what the function does. ~~
 }
 \usage{
-PhenoPro(x)
+Pheno(x)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -48,13 +48,11 @@ PhenoPro(x)
 
 ## The function is currently defined as
 
-PhenoPro(sds, x = "Fs", y = "LIGHT", label = "R4DX.F",
-	defaultLabel = "D", block = "RowRun", orderby = "Time.n",
-	method = "SVM",
-	step = 1, width = 5, nfeatures = 3, ncluster = NULL,
-	cvNumber = 100,
-	testBlockProp = 0.2,
-	visualization = FALSE)
+Pheno(data = subset(sds, LabelDeve == "R1"), x = c("LIGHT", "RH"), 
+	y = c("Fs", "Phi2"), label = "R4DX2", defaultLabel = "D", 
+	ncluster = NULL, block = c("Row", "Run"), orderby = "Time.n", 
+	method = "SVM",	
+	step = 1, width = 6, nfeatures = 3)
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

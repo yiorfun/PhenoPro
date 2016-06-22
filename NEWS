@@ -1,3 +1,13 @@
+VERSION 0.5.0
+- Simplify PhenoPro() function, separate cross-validation and plot option;
+- Add predict option;
+- Add a default clustering method K-means;
+- Improve predict() function that allows Pheno object;
+- Create cv() function that allows functioning on Pheno object;
+- Improve plot() function that allows plotting cvPheno object;
+- Improve DESCRIPTION file, Imports: viridis, ggthemes;
+- Improve NAMESPACE file, import(viridis), ggthemes.
+
 VERSION 0.4.1
 - Fix a bug that return of "mapply" is not a list when test sample size are equal, testSample <- mapply(...,SIMPLIFY = FALSE)
 

@@ -267,8 +267,6 @@ BAYNIGFUN <- function(x, y, step, width) {
 	return(result)
 }
 
-
-
 BayesianNIG <- function(x, ...) UseMethod("BayesianNIG")
 
 BayesianNIG.Pheno <- function(object){
@@ -750,23 +748,3 @@ Pheno <- function(data = NULL, x = NULL, y = NULL, label = NULL,
 	
 }
 
-PhenoPro <- function(data = NULL, x = NULL, y = NULL, label = NULL, 
-	defaultLabel = NULL, ncluster = NULL, block = NULL, orderby = NULL, 
-	method = "SVM",	step = 1, width = 6, nfeatures = 3, cvNumber = 100, 
-	testBlockProp = 0.2, visualization = FALSE){
-	
-	res <- Pheno(data = data, x = x, y = y, label = label, 
-		defaultLabel = defaultLabel, ncluster = ncluster, block = block, 
-		orderby = orderby, 
-		method = method, step = step, width = width, nfeatures = nfeatures)
-	print(summary(res))
-	cvres <- cv(res, cvNumber = cvNumber, testBlockProp = testBlockProp)
-	if(visualization == TRUE){
-		plots <- plot(cvres)
-		print(summary(cvres))
-		return(plots)	
-	} else {
-		print(summary(cvres))
-	}
-	
-}
